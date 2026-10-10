@@ -11,3 +11,8 @@
 /.vscode
 /media/*
 .idea/
+
+# Node / TypeScript
+node_modules/
+dist/
+*.tsbuildinfo

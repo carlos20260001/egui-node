@@ -1,0 +1,4 @@
+{
+  "files": [],
+  "references": [{ "path": "./packages/emath" }, { "path": "./packages/ecolor" }, { "path": "./packages/epaint" }]
+}

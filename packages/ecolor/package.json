@@ -1,0 +1,25 @@
+{
+  "name": "@egui-node/ecolor",
+  "version": "0.36.2",
+  "description": "Color conversions and types (TypeScript port of the Rust `ecolor` crate)",
+  "license": "MIT OR Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@egui-node/emath": "0.36.2"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "test": "vitest run"
+  }
+}
