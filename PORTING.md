@@ -32,7 +32,7 @@ any ported logic.
 |---|---:|---|
 | `emath` | 5096 | **done** - 105 tests |
 | `ecolor` | 1844 | **done** - 34 tests |
-| `epaint` | 19177 | **in progress** - 66 tests |
+| `epaint` | 19177 | **in progress** - 98 tests |
 | `egui` | 59582 | pending |
 | `egui_extras` | 6188 | pending |
 | others | — | out of scope (see above) |
@@ -46,9 +46,9 @@ any ported logic.
 | `stroke`, `color` | 292 | done |
 | `brush`, `direction`, `TextureId` | ~120 | done |
 | `mesh`, `viewport`, `paint_callback` | ~700 | done |
-| `rounded_rect` | ~250 | pending |
-| `shapes/*` (circle, ellipse, rect, path, band, shape) | ~1500 | done |
-| `shapes/bezier_shape`, `text_shape` | ~1350 | pending |
+| `rounded_rect` | 250 | done |
+| `shapes/*` (circle, ellipse, rect, path, band, bezier, shape) | ~2600 | done |
+| `shapes/text_shape` | 213 | pending (needs `text/*`) |
 | `tessellator` | 2950 | pending |
 | `text/*` | ~7000 | pending |
 | `textures`, `texture_atlas`, `image` | ~1150 | pending |
@@ -255,6 +255,17 @@ Currently pinned:
 
 Known cosmetic divergence, accepted: Rust's `{:.N}` float formatting rounds
 ties to even, JS `toFixed` rounds half up. This only affects `Debug` strings.
+
+### Verifying numeric ports
+
+The Bézier flattening tests in `epaint` assert *exact point counts* at a range
+of tolerances (`packages/epaint/src/bezier.test.ts`), ported verbatim from the
+Rust suite. That turns out to be a strong fingerprint for the flattening
+algorithm: bounding boxes can agree while the flattening is subtly wrong.
+
+It immediately caught a transcription error - `approx_parabola_integral` uses
+two nested square roots (`sqrt(sqrt(...))`) and one was dropped, which shifted
+every count by a few points.
 
 ## Deliberately not ported
 

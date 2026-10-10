@@ -15,3 +15,4 @@ export * from './shapes/rect_shape.js';
 export * from './shapes/path_shape.js';
 export * from './shapes/band_shape.js';
 export * from './shapes/paint_callback.js';export * from './shapes/shape.js';
+export * from './rounded_rect.js';

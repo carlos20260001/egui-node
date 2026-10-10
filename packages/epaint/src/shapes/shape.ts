@@ -17,23 +17,23 @@ import { CornerRadius } from '../corner_radius.js';
 import type { Direction } from '../direction.js';
 
 import { BandShape } from './band_shape.js';
+import { CubicBezierShape, QuadraticBezierShape } from './bezier_shape.js';
 import { CircleShape } from './circle_shape.js';
 import { EllipseShape } from './ellipse_shape.js';
+import { PaintCallback } from './paint_callback.js';
 import { PathShape } from './path_shape.js';
 import { RectShape } from './rect_shape.js';
 
 export { BandPoint, BandShape } from './band_shape.js';
 export { CircleShape } from './circle_shape.js';
 export { EllipseShape } from './ellipse_shape.js';
+export { CubicBezierShape, QuadraticBezierShape } from './bezier_shape.js';
 export { PathShape } from './path_shape.js';
 export { RectShape } from './rect_shape.js';
 export { PaintCallback, PaintCallbackInfo } from './paint_callback.js';
 
 /** Text is a separate variant; see `text_shape.ts` (not yet ported). */
 export type TextShapePayload = unknown;
-
-/** Bézier shapes are in `bezier_shape.ts` (not yet ported). */
-export type BezierPayload = unknown;
 
 /** A shape to paint. */
 export type Shape =
@@ -47,9 +47,9 @@ export type Shape =
   | { kind: 'Rect'; shape: RectShape }
   | { kind: 'Text'; shape: TextShapePayload }
   | { kind: 'Mesh'; mesh: Mesh }
-  | { kind: 'QuadraticBezier'; shape: BezierPayload }
-  | { kind: 'CubicBezier'; shape: BezierPayload }
-  | { kind: 'Callback'; callback: unknown };
+  | { kind: 'QuadraticBezier'; shape: QuadraticBezierShape }
+  | { kind: 'CubicBezier'; shape: CubicBezierShape }
+  | { kind: 'Callback'; callback: PaintCallback };
 
 /** Paint nothing. This can be useful as a placeholder. */
 export function shapeNoop(): Shape {
@@ -257,9 +257,9 @@ export function visual_bounding_rect(shape: Shape): Rect {
       return shape.mesh.calc_bounds();
     case 'QuadraticBezier':
     case 'CubicBezier':
-      return (shape.shape as { visual_bounding_rect(): Rect }).visual_bounding_rect();
+      return shape.shape.visual_bounding_rect();
     case 'Callback':
-      return (shape.callback as { rect: Rect }).rect;
+      return shape.callback.rect;
   }
 }
 
@@ -341,13 +341,15 @@ export function transform(shape: Shape, ts: TSTransform): void {
       return;
     case 'QuadraticBezier':
     case 'CubicBezier':
-      (shape.shape as { transform(ts: TSTransform): void }).transform(ts);
+      for (let i = 0; i < shape.shape.points.length; i++) {
+        shape.shape.points[i] = ts.mul_pos(shape.shape.points[i]!);
+      }
+      shape.shape.stroke.width *= ts.scaling;
       return;
     case 'Callback': {
       // Only the rect is scaled, as opposed to other shapes where the stroke is
       // also scaled.
-      const cb = shape.callback as { rect: Rect };
-      cb.rect = ts.mul_rect(cb.rect);
+      shape.callback.rect = ts.mul_rect(shape.callback.rect);
       return;
     }
   }
@@ -378,11 +380,13 @@ export function shapeEquals(a: Shape, b: Shape): boolean {
     case 'Rect':
       return b.kind === 'Rect' && a.shape.equals(b.shape);
     case 'Text':
-    case 'QuadraticBezier':
-    case 'CubicBezier':
     case 'Callback':
-      // Not yet ported upstream-side; Rust compares these by value.
+      // `Text` is not yet ported; Rust compares these by value.
       return false;
+    case 'QuadraticBezier':
+      return b.kind === 'QuadraticBezier' && a.shape.equals(b.shape);
+    case 'CubicBezier':
+      return b.kind === 'CubicBezier' && a.shape.equals(b.shape);
     case 'Mesh':
       return b.kind === 'Mesh' && a.mesh.equals(b.mesh);
   }
