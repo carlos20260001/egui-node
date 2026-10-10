@@ -32,7 +32,7 @@ any ported logic.
 |---|---:|---|
 | `emath` | 5096 | **done** - 105 tests |
 | `ecolor` | 1844 | **done** - 34 tests |
-| `epaint` | 19177 | **in progress** - 29 tests |
+| `epaint` | 19177 | **in progress** - 66 tests |
 | `egui` | 59582 | pending |
 | `egui_extras` | 6188 | pending |
 | others | — | out of scope (see above) |
@@ -44,9 +44,11 @@ any ported logic.
 | `margin`, `margin_f32` | 567 | done |
 | `corner_radius`, `corner_radius_f32` | 544 | done |
 | `stroke`, `color` | 292 | done |
-| `brush`, `TextureId` | ~100 | done |
-| `rounded_rect`, `shapes/*` | ~2400 | pending |
-| `mesh` | 359 | pending |
+| `brush`, `direction`, `TextureId` | ~120 | done |
+| `mesh`, `viewport`, `paint_callback` | ~700 | done |
+| `rounded_rect` | ~250 | pending |
+| `shapes/*` (circle, ellipse, rect, path, band, shape) | ~1500 | done |
+| `shapes/bezier_shape`, `text_shape` | ~1350 | pending |
 | `tessellator` | 2950 | pending |
 | `text/*` | ~7000 | pending |
 | `textures`, `texture_atlas`, `image` | ~1150 | pending |
@@ -94,13 +96,35 @@ There are three shapes in this codebase, each with its own TypeScript analogue:
 
 | Rust | TypeScript | Used for |
 |---|---|---|
-| unit enum | `type T = 'A' \| 'B'` + named consts | `Align`, `StrokeKind` |
+| unit enum | `type T = 'A' \| 'B'` + named consts | `Align`, `StrokeKind`, `Direction` |
 | enum with a single field | `{kind: 'A', value: V}` union | `ColorMode`, `TextureId` |
+| enum with per-variant fields | `{kind: 'X', ...payload}` union | `Shape` |
 | `struct` of fields | `class` with public fields | `Color32`, `Stroke`, `Margin` |
 
 `ColorMode` and `TextureId` are the middle case. `ColorMode::UV` holds an
 `Arc<dyn Fn>`; Rust hand-writes its `PartialEq` so that two closures are never
 equal, which `colorModeEquals` reproduces.
+
+`Shape` is the widest case: thirteen variants, each with a different payload, and
+a `visual_bounding_rect` plus a `transform` that both dispatch on the
+discriminant. TypeScript narrows the union in a `switch`, but because `Shape` is
+a union of *object literals* rather than classes, the "methods" become free
+functions (`visual_bounding_rect(shape)`, `transform(shape, ts)`) rather than
+methods on a `Shape` class. A class hierarchy would reintroduce the shared-base-
+class problems, so the tagged union is closer to the Rust anyway.
+
+### `Arc<dyn Any>` callbacks
+
+`PaintCallback::callback` is an `Arc<dyn Any + Send + Sync>` that each backend
+downcasts to what it expects, and `PartialEq` uses `Arc::ptr_eq`. Here it is
+`unknown`, compared by `===`.
+
+### `mem::size_of` assertions
+
+Rust has tests like `assert_eq!(size_of::<Shape>(), 64)` to stop these
+enums growing. They do not apply to JS, where object layout is the engine's
+business. `Mesh::bytes_used` therefore reports an approximate element count
+rather than a byte count, and this is called out in its doc comment.
 
 ### `u32::from_be_bytes`
 
