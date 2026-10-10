@@ -16,3 +16,7 @@
 node_modules/
 dist/
 *.tsbuildinfo
+
+# Upstream Rust font-stack crates, cloned as reference for the port.
+# Nested git repos: vendored, not part of this project's source.
+/vendor/rust-fontstack/

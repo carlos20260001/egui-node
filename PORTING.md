@@ -138,6 +138,61 @@ Rust shadows freely (`let h = (h.fract() + 1.0).fract();`). In JavaScript that
 is a temporal-dead-zone error, so shadowed locals get a new name. This was a real
 bug caught by the tests in `rgb_from_hsv`.
 
+## The Rust font stack
+
+`epaint`'s text subsystem leans on four upstream Rust crates. Node has no
+direct equivalent for three of them, so each gets a TypeScript replacement in a
+`node.js` branch on a fork under `carlos20260001`:
+
+| Upstream crate | Role in egui | TS replacement lives in |
+|---|---|---|
+| `skrifa` | glyph metrics, charmap, outlines | [`carlos20260001/fontations`](https://github.com/carlos20260001/fontations/tree/node.js) `node-js-port/` |
+| `vello_cpu` | glyph rasterization | [`carlos20260001/vello`](https://github.com/carlos20260001/vello/tree/node.js) `node-js-port/` |
+| `peniko` | paint/fill layer | [`carlos20260001/peniko`](https://github.com/carlos20260001/peniko/tree/node.js) `node-js-port/` |
+| `fontique` | font discovery and matching | [`carlos20260001/parley`](https://github.com/carlos20260001/parley/tree/node.js) `node-js-port/` |
+
+Two of these are not separate repos: `vello_cpu` lives inside `linebender/vello`,
+and `fontique` inside `linebender/parley`. Note also that **`skrifa`'s repo is
+`googlefonts/fontations`**, not a `skrifa` repo - the `Skrifa/Skrifa` GitHub org
+is an unrelated web word processor.
+
+**Shaping** (`harfrust`) is replaced by
+[HarfBuzzJS](https://harfbuzz.github.io/harfbuzzjs), which is maintained by the
+HarfBuzz project itself rather than being a third-party wrapper. Caveats: it is
+built with `-DHB_TINY` (so `HB_NO_OT_GLYPH_NAMES`), and v1.0 is a breaking
+rewrite, so the `0.10.x` line is the one to pin.
+
+### Licence
+
+All four crates are `MIT OR Apache-2.0`, identical to egui's own dual licence,
+and each ships both `LICENSE-MIT` and `LICENSE-APACHE`. The TypeScript ports
+inherit that. This was checked before anything was forked.
+
+### Local reference clones
+
+Reference clones live in `vendor/rust-fontstack/` and are gitignored (nested
+git repos, vendored, not part of this project's source). They are shallow
+clones of `main`; note that `main` is ahead of what egui pins:
+
+| Crate | egui pins | clone is at |
+|---|---|---|
+| `skrifa` | 0.44.0 | 0.48.0 |
+| `vello_cpu` | 0.2.0 | 0.3.0 |
+| `fontique` | 0.11.1 | 0.12.0 |
+| `peniko` | 0.6.1 | 0.6.1 (matches) |
+
+When porting against a specific API, check out the tag egui actually pins, or
+port against `main` and accept the drift - the public API surface used here is
+stable across these bumps.
+
+### Known gap: font enumeration
+
+`fontique` enumerates system fonts via `fontconfig`/`CoreText`/`DirectWrite`.
+Node cannot rely on those, and `egui_system_fonts` is out of scope for this
+port. The `fontique` replacement therefore ships a filesystem scanner plus
+explicit font registration; a GUI embedding it must supply its own
+`FontProvider`.
+
 ## Conventions
 
 ### Naming
